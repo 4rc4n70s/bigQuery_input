@@ -1,0 +1,97 @@
+function onOpen() {
+  // Add menu at toolbar
+  var ui = SpreadsheetApp.getUi();
+
+  ui.createMenu('Input Query Data (VV_General)') // Button name
+    .addItem('Ejecutar', 'InputQueryDataVV_General') // Run menu. Change the function to execute
+    .addItem('Copy Table', 'copyTableWithTimestamp') // Add the new button
+    .addToUi();
+    
+}
+
+function InputQueryDataVV_General() {
+  
+  // Set pasword for script
+  let ui = SpreadsheetApp.getUi();
+  let result = ui.prompt('Enter Password', ui.ButtonSet.OK);
+  let topic = result.getResponseText();
+
+  if (topic == 'venice') {
+    // Password is correct, run your code here
+
+  // Permissions
+  DriveApp.getRootFolder();
+
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var formatRange = sheet.getRange("K:K"); //range to format
+  formatRange.setNumberFormat("#0.00"); 
+
+
+  var projectId = 'dbfolivin'; // Replace with your project ID
+  var datasetId = 'finanzas'; // Replace with your dataset ID
+
+  //Define the query to insert data from INPUT to Master
+  var query = "INSERT INTO dbfolivin.finanzas.vv_finanzas_master SELECT * FROM dbfolivin.finanzas.vv_finanzas_input WHERE Tipo IS NOT NULL;";
+
+  var request = {
+    query: query,
+    useLegacySql: false
+  };
+
+  // Get the current timestamp in ISO string
+  var timestamp = new Date().toISOString().replace(/\D/g, '').slice(0, -3);
+
+  // Create the new table name with the timestamp
+  var newTableName = 'vv_finanzas_master_' + timestamp;
+
+  // Create the query to copy the table
+  var copyQuery = `CREATE TABLE \`${projectId}.backups.${newTableName}\` AS SELECT * FROM \`${projectId}.${datasetId}.vv_finanzas_master\`;`;
+
+  // Run the copy query
+  var copyRequest = { query: copyQuery, useLegacySql: false };
+  BigQuery.Jobs.query(copyRequest, projectId);
+
+  // Run the query to insert data from INPUT to MASTER
+  BigQuery.Jobs.query(request, projectId);
+
+  // Clear data from Range
+  var deleteRange = sheet.getRange('Base!B2:O1000'); // Define range 1
+  deleteRange.clearContent();
+  formatRange.setNumberFormat("$#,##0.00"); //format column K back to $
+
+  } else {
+    ui.alert('Password incorrect or canceled.'); // if pasword is incorrect, stop the script
+  }
+}
+
+
+function copyTableWithTimestamp() {
+
+  // Set pasword for script
+  let ui = SpreadsheetApp.getUi();
+  let result = ui.prompt('Enter Password', ui.ButtonSet.OK);
+  let topic = result.getResponseText();
+
+  if (topic == 'venice') {
+    // Password is correct, run your code here
+
+  // Permissions
+  DriveApp.getRootFolder();
+
+  var projectId = 'dbfolivin'; // Replace with your project ID
+  var datasetId = 'finanzas'; // Replace with your dataset ID
+
+  // Get the current timestamp in ISO string
+  var timestamp = new Date().toISOString().replace(/\D/g, '').slice(0, -3);
+
+  // Create the new table name with the timestamp
+  var newTableName = 'vv_finanzas_master_' + timestamp;
+
+  // Create the query to copy the table
+  var copyQuery = `CREATE TABLE \`${projectId}.backups.${newTableName}\` AS SELECT * FROM \`${projectId}.${datasetId}.vv_finanzas_master\`;`;
+
+  // Run the copy query
+  var copyRequest = { query: copyQuery, useLegacySql: false };
+  BigQuery.Jobs.query(copyRequest, projectId);
+}
+}
